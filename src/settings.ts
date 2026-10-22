@@ -33,7 +33,7 @@ function setRaw(k: string, v: string): void {
 }
 
 export function defaultSettings(): Settings {
-  return { autoLockMinutes: 5, theme: "dark", accent: "teal" };
+  return { autoLockMinutes: 5, theme: "light", accent: "teal" };
 }
 
 export function loadSettings(): Settings {
@@ -44,7 +44,7 @@ export function loadSettings(): Settings {
     if (p && (typeof p.autoLockMinutes === "number" || p.autoLockMinutes === null)) {
       return {
         autoLockMinutes: p.autoLockMinutes,
-        theme: p.theme === "light" ? "light" : "dark",
+        theme: p.theme === "dark" ? "dark" : "light",
         accent: p.accent === "purple" ? "purple" : "teal",
       };
     }

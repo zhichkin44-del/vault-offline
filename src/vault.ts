@@ -61,6 +61,17 @@ export interface SealOpts {
   kdf?: KdfInfo;
 }
 
+/** Encrypts entries with an already-derived key (no KDF run). */
+export async function sealWithKey(
+  vault: Vault,
+  key: CryptoKey,
+  salt: string,
+  kdf: KdfInfo,
+): Promise<VaultFile> {
+  const blob = await encryptJSON(key, vault.entries);
+  return { v: 2, kdf, salt, iv: blob.iv, ct: blob.ct };
+}
+
 export async function seal(
   vault: Vault,
   master: string,
@@ -69,13 +80,63 @@ export async function seal(
   const salt = opts.salt ?? randomSaltB64();
   const kdf = opts.kdf ?? ARGON2_DEFAULT;
   const key = opts.key ?? (await deriveKey(master, b64ToBytes(salt), kdf));
-  const blob = await encryptJSON(key, vault.entries);
-  return { v: 2, kdf, salt, iv: blob.iv, ct: blob.ct };
+  return sealWithKey(vault, key, salt, kdf);
 }
 
-export async function open(file: VaultFile, master: string): Promise<Vault> {
+export interface Unlocked {
+  vault: Vault;
+  key: CryptoKey;
+  salt: string;
+  kdf: KdfInfo;
+  file: VaultFile;
+}
+
+/** Creates a new encrypted vault; derives the key exactly once. */
+export async function createVault(master: string, vault = emptyVault()): Promise<Unlocked> {
+  const salt = randomSaltB64();
+  const kdf = ARGON2_DEFAULT;
+  const key = await deriveKey(master, b64ToBytes(salt), kdf);
+  const file = await sealWithKey(vault, key, salt, kdf);
+  return { vault: { ...vault, salt }, key, salt, kdf, file };
+}
+
+/** Decrypts a vault file and returns the derived key with it (one KDF run). */
+export async function openVault(file: VaultFile, master: string): Promise<Unlocked> {
   const kdf: KdfInfo = file.kdf ?? legacyKdf(file.v);
   const key = await deriveKey(master, b64ToBytes(file.salt), kdf);
   const entries = (await decryptJSON(key, { iv: file.iv, ct: file.ct })) as Entry[];
-  return { v: file.v, salt: file.salt, entries };
+  if (!Array.isArray(entries)) throw new Error("invalid-vault-format");
+  return { vault: { v: file.v, salt: file.salt, entries }, key, salt: file.salt, kdf, file };
+}
+
+export async function open(file: VaultFile, master: string): Promise<Vault> {
+  return (await openVault(file, master)).vault;
+}
+
+export interface MergeResult {
+  vault: Vault;
+  added: number;
+  updated: number;
+}
+
+/**
+ * Merges entries from a backup into the current vault. Entries are matched by
+ * id; when both sides have one, the more recently updated copy wins. Nothing
+ * from the current vault is ever removed.
+ */
+export function mergeEntries(current: Vault, incoming: Entry[]): MergeResult {
+  const byId = new Map(current.entries.map((e) => [e.id, e] as const));
+  let added = 0;
+  let updated = 0;
+  for (const e of incoming) {
+    const mine = byId.get(e.id);
+    if (!mine) {
+      byId.set(e.id, e);
+      added++;
+    } else if ((e.updated ?? 0) > (mine.updated ?? 0)) {
+      byId.set(e.id, e);
+      updated++;
+    }
+  }
+  return { vault: { ...current, entries: [...byId.values()] }, added, updated };
 }

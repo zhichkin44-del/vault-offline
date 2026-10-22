@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { state } from "../src/state.ts";
 import { renderLock } from "../src/lock.ts";
-import { renderSidebar } from "../src/sidebar.ts";
+import { renderTopbar, renderFilters, renderStatus } from "../src/topbar.ts";
 import { renderGrid } from "../src/grid.ts";
 
 // --- jsdom environment setup (must run before any DOM usage) ---
@@ -36,10 +36,10 @@ state.vault = {
 state.activeCategory = "all";
 
 const noop = (): void => {};
-const sidebarActions = {
-  onChange: noop, onAdd: noop, onSettings: noop, onLock: noop, onLang: noop, onExport: noop, onImport: noop,
+const topbarActions = {
+  onSearch: noop, onFilter: noop, onAdd: noop, onSettings: noop, onLock: noop, onLang: noop, onExport: noop, onImport: noop,
 } as never;
-const gridCb = { onEdit: noop, onDelete: async () => {} } as never;
+const gridCb = { onEdit: noop, onAdd: noop } as never;
 
 test("renderLock produces lock card with language toggle outside it", async () => {
   const root = document.createElement("div");
@@ -49,23 +49,63 @@ test("renderLock produces lock card with language toggle outside it", async () =
   assert.ok(root.querySelector(".lock"), "lock card should exist");
 });
 
-test("renderSidebar produces nav, actions and security status", () => {
+test("renderTopbar produces search, add, lock and a closed menu", () => {
   const root = document.createElement("div");
   document.body.appendChild(root);
-  renderSidebar(root, sidebarActions);
-  assert.ok(root.querySelector(".nav"), "nav should exist");
-  assert.ok(root.querySelector(".sidebar-actions"), "sidebar actions should exist");
-  assert.ok(root.querySelector(".sidebar-add"), "add button should exist");
-  assert.ok(root.querySelector(".sec-status"), "security status should exist");
-  assert.ok(root.querySelector("[aria-label]"), "interactive items should expose aria-label");
+  const input = renderTopbar(root, topbarActions);
+  assert.ok(root.querySelector(".search input"), "search input should exist");
+  assert.equal(input, root.querySelector(".search input"));
+  assert.ok(root.querySelector(".btn.primary"), "add button should exist");
+  assert.ok(root.querySelector(".topbar-lock"), "lock button should exist");
+  const menu = root.querySelector<HTMLElement>(".menu")!;
+  assert.equal(menu.hidden, true, "menu starts closed");
+  assert.equal(menu.querySelectorAll(".menu-item").length, 4);
+  assert.ok(root.querySelector("[aria-label]"), "icon buttons should expose aria-label");
+});
+
+test("renderFilters shows counts and switches category", () => {
+  const root = document.createElement("div");
+  document.body.appendChild(root);
+  let changed = 0;
+  renderFilters(root, () => changed++);
+  const chips = root.querySelectorAll<HTMLButtonElement>(".chip");
+  assert.equal(chips.length, 4);
+  assert.equal(chips[0].querySelector(".chip-count")!.textContent, "3");
+  chips[2].click();
+  assert.equal(state.activeCategory, "note");
+  assert.equal(changed, 1);
+  state.activeCategory = "all";
+});
+
+test("renderStatus shows offline/encrypted status and timer", () => {
+  const root = document.createElement("div");
+  renderStatus(root, true);
+  assert.ok(root.querySelector(".status-left"));
+  assert.ok(root.querySelector("#lock-timer"));
+});
+
+test("search filters the grid by query", () => {
+  const root = document.createElement("div");
+  state.query = "recipe";
+  renderGrid(root, gridCb);
+  assert.equal(root.querySelectorAll(".card").length, 1);
+  state.query = "zzz-no-match";
+  renderGrid(root, gridCb);
+  assert.equal(root.querySelectorAll(".card").length, 0);
+  assert.ok(root.querySelector(".empty"));
+  state.query = "";
 });
 
 test("renderGrid produces cards with reveal controls", () => {
   const root = document.createElement("div");
   document.body.appendChild(root);
   renderGrid(root, gridCb);
-  assert.ok(root.querySelector(".card"), "at least one card should render");
+  assert.equal(root.querySelectorAll(".card").length, 3, "all cards should render");
   assert.ok(root.querySelector(".card .icon-inline svg"), "eye/reveal svg should render");
+  assert.ok(!root.textContent!.includes("s3cret"), "secrets are masked by default");
+  const reveal = root.querySelector<HTMLButtonElement>(".card .card-value.secret + .card-tools .icon-inline")!;
+  reveal.click();
+  assert.ok(root.textContent!.includes("s3cret"), "reveal shows the secret");
 });
 
 // --- path data validation (catches malformed SVG path commands) ---

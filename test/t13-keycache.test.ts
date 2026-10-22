@@ -16,7 +16,6 @@ test("T13: persist reuses cached key (stable salt, no re-derive)", async () => {
 
   state.storage = storage;
   state.vault = vault0;
-  state.master = master;
   state.key = key0;
   state.salt = sealed0.salt;
   state.kdf = kdf0;
@@ -42,7 +41,6 @@ test("T13: persist reuses cached key (stable salt, no re-derive)", async () => {
   // cleanup singleton state
   state.storage = new MemoryStorage();
   state.vault = null;
-  state.master = null;
   state.key = null;
   state.salt = null;
   state.kdf = null;

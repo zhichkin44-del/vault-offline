@@ -5,7 +5,7 @@ import { loadSettings, saveSettings, defaultSettings } from "../src/settings";
 test("defaultSettings returns 5 minutes and default theme/accent", () => {
   const d = defaultSettings();
   assert.equal(d.autoLockMinutes, 5);
-  assert.equal(d.theme, "dark");
+  assert.equal(d.theme, "light");
   assert.equal(d.accent, "teal");
 });
 

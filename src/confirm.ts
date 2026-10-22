@@ -4,6 +4,7 @@ export function confirmModal(
   message: string,
   okLabel: string,
   cancelLabel: string,
+  variant: "danger" | "primary" = "danger",
 ): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const overlay = el("div", { class: "modal-overlay" });
@@ -19,7 +20,7 @@ export function confirmModal(
       textContent: cancelLabel,
     });
     const okBtn = el("button", {
-      class: "btn danger",
+      class: "btn " + variant,
       type: "button",
       textContent: okLabel,
     });
@@ -27,13 +28,14 @@ export function confirmModal(
     modal.append(actions);
 
     const close = (result: boolean): void => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       overlay.remove();
       resolve(result);
     };
 
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
+        e.stopImmediatePropagation();
         e.preventDefault();
         close(false);
       }
@@ -44,7 +46,7 @@ export function confirmModal(
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close(false);
     });
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
 
     overlay.append(modal);
     document.body.append(overlay);

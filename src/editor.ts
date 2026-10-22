@@ -3,7 +3,8 @@ import { state, persist } from "./state";
 import { makeEntry, addEntry, updateEntry, removeEntry } from "./vault";
 import { generatePassword } from "./generator";
 import { t } from "./i18n";
-import { el } from "./dom";
+import { el, openModal, field, iconButton } from "./dom";
+import { ICON } from "./icons";
 import { confirmModal } from "./confirm";
 
 interface EditorOpts {
@@ -11,222 +12,218 @@ interface EditorOpts {
   onClose: () => void;
 }
 
-function labeled(label: string, control: HTMLElement): HTMLElement {
-  const wrap = el("div", { class: "form-row" });
-  wrap.append(el("label", { class: "form-label", textContent: label }));
-  wrap.append(control);
-  return wrap;
-}
+const TYPES: [EntryType, string][] = [
+  ["login", "type.login"],
+  ["note", "type.note"],
+  ["custom", "type.custom"],
+];
 
-function checkbox(
-  checked: boolean,
-  labelText: string,
-): { wrap: HTMLLabelElement; input: HTMLInputElement } {
-  const input = el("input", { type: "checkbox" }) as HTMLInputElement;
+function toggle(checked: boolean, label: string): { wrap: HTMLLabelElement; input: HTMLInputElement } {
+  const input = el("input", { type: "checkbox" });
   input.checked = checked;
-  const lab = el("label", { class: "cb-label" });
-  lab.append(input, document.createTextNode(" " + labelText));
-  return { wrap: lab, input };
+  const wrap = el("label", { class: "toggle-chip" });
+  wrap.append(input, el("span", { textContent: label }));
+  return { wrap, input };
 }
 
 export function openEditor(opts: EditorOpts): void {
   const editing = opts.entry;
-  const overlay = el("div", { class: "modal-overlay" });
-  const modal = el("div", { class: "modal" });
-  overlay.append(modal);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-
-  function close(): void {
-    overlay.remove();
-  }
-
-  modal.append(
-    el("h2", {
-      class: "modal-title",
-      textContent: editing ? t("editor.edit") : t("editor.new"),
-    }),
-  );
-
   let type: EntryType = editing?.type ?? "login";
+  const m = openModal({ title: editing ? t("editor.edit") : t("editor.new"), className: "editor" });
 
-  const typeRow = el("div", { class: "form-row" });
-  typeRow.append(el("label", { class: "form-label", textContent: t("editor.type") }));
-  const typeSel = el("select", { class: "input" }) as HTMLSelectElement;
-  for (const ty of ["login", "note", "custom"] as EntryType[]) {
-    const o = el("option", { value: ty, textContent: ty }) as HTMLOptionElement;
-    if (ty === type) o.selected = true;
-    typeSel.append(o);
+  // Type: segmented control instead of a raw <select>
+  const seg = el("div", { class: "segmented" });
+  seg.setAttribute("role", "radiogroup");
+  seg.setAttribute("aria-label", t("editor.type"));
+  const segBtns = new Map<EntryType, HTMLButtonElement>();
+  for (const [ty, key] of TYPES) {
+    const b = el("button", { class: "seg", type: "button", textContent: t(key) });
+    b.setAttribute("role", "radio");
+    b.addEventListener("click", () => {
+      type = ty;
+      syncSeg();
+      renderBody();
+    });
+    segBtns.set(ty, b);
+    seg.append(b);
   }
-  typeRow.append(typeSel);
-  modal.append(typeRow);
+  function syncSeg(): void {
+    for (const [ty, b] of segBtns) {
+      b.classList.toggle("active", ty === type);
+      b.setAttribute("aria-checked", String(ty === type));
+    }
+  }
+  syncSeg();
 
-  const body = el("div", { class: "form-body" });
-  modal.append(body);
+  const form = el("div", { class: "form-body" });
+  m.body.append(seg, form);
 
   const titleInput = el("input", {
     class: "input",
     type: "text",
-    placeholder: t("editor.title"),
+    placeholder: t("editor.titlePh"),
     value: editing?.title ?? "",
-  }) as HTMLInputElement;
+  });
   const loginInput = el("input", {
     class: "input",
     type: "text",
-    placeholder: t("card.login"),
     value: editing?.login ?? "",
-  }) as HTMLInputElement;
+    spellcheck: false,
+  });
+  loginInput.autocomplete = "off";
   const urlInput = el("input", {
     class: "input",
     type: "text",
-    placeholder: t("editor.url"),
+    placeholder: "github.com",
     value: editing?.url ?? "",
-  }) as HTMLInputElement;
+    spellcheck: false,
+  });
   const passInput = el("input", {
-    class: "input",
-    type: "text",
-    placeholder: t("editor.password"),
+    class: "input mono",
+    type: "password",
     value: editing?.password ?? "",
-  }) as HTMLInputElement;
-  const noteInput = el("textarea", {
-    class: "input",
-    placeholder: t("editor.note"),
-  }) as HTMLTextAreaElement;
+    spellcheck: false,
+  });
+  passInput.autocomplete = "new-password";
+  const noteInput = el("textarea", { class: "input", rows: 6 });
   noteInput.value = editing?.note ?? "";
 
-  const fieldsWrap = el("div", { class: "fields-wrap" });
-  const fields: { key: HTMLInputElement; val: HTMLInputElement; row: HTMLElement }[] = [];
-  function addFieldRow(k = "", v = ""): void {
-    const row = el("div", { class: "field-row" });
-    const keyI = el("input", {
-      class: "input",
-      type: "text",
-      placeholder: t("editor.fieldKey"),
-    }) as HTMLInputElement;
-    const valI = el("input", {
-      class: "input",
-      type: "text",
-      placeholder: t("editor.fieldValue"),
-    }) as HTMLInputElement;
-    keyI.value = k;
-    valI.value = v;
-    const del = el("button", { class: "btn small", textContent: "✕" });
-    del.addEventListener("click", () => row.remove());
-    row.append(keyI, valI, del);
-    fieldsWrap.append(row);
-    fields.push({ key: keyI, val: valI, row });
-  }
+  // Password field with reveal + generator
+  const passWrap = el("div", { class: "input-group" });
+  const reveal = iconButton(ICON.eye, t("card.reveal"), "in-input");
+  reveal.addEventListener("click", () => {
+    const show = passInput.type === "password";
+    passInput.type = show ? "text" : "password";
+    reveal.innerHTML = show ? ICON.eyeOff : ICON.eye;
+    reveal.setAttribute("aria-label", show ? t("card.hide") : t("card.reveal"));
+  });
+  const regen = iconButton(ICON.refresh, t("editor.generate"), "in-input");
+  passWrap.append(passInput, reveal, regen);
 
-  const genLen = el("input", {
-    class: "input small",
-    type: "number",
-    value: "16",
-  }) as HTMLInputElement;
-  const cbLower = checkbox(true, t("editor.useLower"));
-  const cbUpper = checkbox(true, t("editor.useUpper"));
-  const cbDigits = checkbox(true, t("editor.useDigits"));
-  const cbSymbols = checkbox(true, t("editor.useSymbols"));
-  const genBtn = el("button", { class: "btn small", textContent: t("editor.generate") });
-  genBtn.addEventListener("click", () => {
+  const gen = el("div", { class: "generator" });
+  const lenOut = el("span", { class: "gen-len mono", textContent: "20" });
+  const lenIn = el("input", { type: "range", min: "8", max: "64", value: "20", class: "range" });
+  lenIn.setAttribute("aria-label", t("editor.length"));
+  const cbLower = toggle(true, t("editor.useLower"));
+  const cbUpper = toggle(true, t("editor.useUpper"));
+  const cbDigits = toggle(true, t("editor.useDigits"));
+  const cbSymbols = toggle(true, t("editor.useSymbols"));
+  const genBtn = el("button", { class: "btn small", type: "button", textContent: t("editor.generate") });
+  const lenRow = el("div", { class: "gen-row" });
+  lenRow.append(el("span", { class: "gen-label", textContent: t("editor.length") }), lenIn, lenOut);
+  const setRow = el("div", { class: "gen-row" });
+  setRow.append(cbLower.wrap, cbUpper.wrap, cbDigits.wrap, cbSymbols.wrap, genBtn);
+  gen.append(lenRow, setRow);
+
+  function generate(): void {
     passInput.value = generatePassword({
-      length: Number(genLen.value) || 16,
+      length: Number(lenIn.value) || 20,
       lower: cbLower.input.checked,
       upper: cbUpper.input.checked,
       digits: cbDigits.input.checked,
       symbols: cbSymbols.input.checked,
     });
+    passInput.type = "text";
+    reveal.innerHTML = ICON.eyeOff;
+  }
+  lenIn.addEventListener("input", () => {
+    lenOut.textContent = lenIn.value;
+    generate();
   });
+  for (const c of [cbLower, cbUpper, cbDigits, cbSymbols]) c.input.addEventListener("change", generate);
+  genBtn.addEventListener("click", generate);
+  regen.addEventListener("click", generate);
+
+  // Custom fields
+  const fieldsWrap = el("div", { class: "fields-wrap" });
+  const fields: { key: HTMLInputElement; val: HTMLInputElement; row: HTMLElement }[] = [];
+  function addFieldRow(k = "", v = ""): void {
+    const row = el("div", { class: "field-row" });
+    const keyI = el("input", { class: "input", type: "text", placeholder: t("editor.fieldKey"), value: k });
+    const valI = el("input", { class: "input mono", type: "text", placeholder: t("editor.fieldValue"), value: v, spellcheck: false });
+    const del = iconButton(ICON.x, t("editor.removeField"));
+    const entry = { key: keyI, val: valI, row };
+    del.addEventListener("click", () => {
+      row.remove();
+      fields.splice(fields.indexOf(entry), 1);
+    });
+    row.append(keyI, valI, del);
+    fieldsWrap.append(row);
+    fields.push(entry);
+  }
+  for (const f of editing?.fields ?? []) addFieldRow(f.k, f.v);
+  const addFieldBtn = el("button", { class: "btn ghost small", type: "button" });
+  const pl = el("span", { class: "btn-icon" });
+  pl.innerHTML = ICON.plus;
+  addFieldBtn.append(pl, el("span", { textContent: t("editor.addField") }));
+  addFieldBtn.addEventListener("click", () => {
+    addFieldRow();
+    fields[fields.length - 1].key.focus();
+  });
+
+  const err = el("div", { class: "form-error" });
+  err.setAttribute("role", "alert");
 
   function renderBody(): void {
-    body.innerHTML = "";
-    body.append(labeled(t("editor.title"), titleInput));
+    form.innerHTML = "";
+    form.append(field(t("editor.title"), titleInput));
     if (type === "login") {
-      body.append(labeled(t("card.login"), loginInput));
-      const genRow = el("div", { class: "gen-row" });
-      genRow.append(
-        genBtn,
-        el("span", { class: "cb-label", textContent: t("editor.length") }),
-        genLen,
-        cbLower.wrap,
-        cbUpper.wrap,
-        cbDigits.wrap,
-        cbSymbols.wrap,
+      form.append(
+        field(t("card.login"), loginInput),
+        field(t("editor.password"), passWrap),
+        gen,
+        field(t("editor.url"), urlInput),
       );
-      body.append(labeled(t("editor.password"), passInput));
-      body.append(genRow);
-      body.append(labeled(t("editor.url"), urlInput));
     } else if (type === "note") {
-      body.append(labeled(t("editor.note"), noteInput));
+      form.append(field(t("editor.note"), noteInput));
     } else {
-      body.append(el("div", { class: "form-label", textContent: t("editor.fields") }));
-      fieldsWrap.innerHTML = "";
-      fields.length = 0;
-      const seed = editing?.fields ?? [];
-      if (seed.length === 0) addFieldRow();
-      else seed.forEach((f) => addFieldRow(f.k, f.v));
-      const addBtn = el("button", { class: "btn small", textContent: t("editor.addField") });
-      addBtn.addEventListener("click", () => addFieldRow());
-      body.append(fieldsWrap, addBtn);
+      if (fields.length === 0) addFieldRow();
+      form.append(el("div", { class: "field-label", textContent: t("editor.fields") }), fieldsWrap, addFieldBtn);
     }
+    form.append(err);
   }
-
-  typeSel.addEventListener("change", () => {
-    type = typeSel.value as EntryType;
-    renderBody();
-  });
   renderBody();
 
-  const err = el("div", { class: "lock-error" });
-  modal.append(err);
-
-  const actions = el("div", { class: "modal-actions" });
-  const cancel = el("button", { class: "btn", textContent: t("editor.cancel") });
-  cancel.addEventListener("click", close);
-  const save = el("button", { class: "btn primary", textContent: t("editor.save") });
+  const cancel = el("button", { class: "btn", type: "button", textContent: t("editor.cancel") });
+  cancel.addEventListener("click", () => m.close());
+  const save = el("button", { class: "btn primary", type: "button", textContent: t("editor.save") });
   save.addEventListener("click", async () => {
     if (!titleInput.value.trim()) {
-      err.textContent = t("editor.title") + "!";
+      err.textContent = t("editor.titleRequired");
+      titleInput.focus();
       return;
     }
     const partial: Partial<Entry> & { type: EntryType; title: string } = {
       type,
       title: titleInput.value.trim(),
-      login: loginInput.value,
-      password: passInput.value,
-      url: urlInput.value,
-      note: noteInput.value,
-      fields: [],
+      login: type === "login" ? loginInput.value : "",
+      password: type === "login" ? passInput.value : "",
+      url: type === "login" ? urlInput.value.trim() : "",
+      note: type === "note" ? noteInput.value : "",
+      fields:
+        type === "custom"
+          ? fields.map((f) => ({ k: f.key.value.trim(), v: f.val.value })).filter((f) => f.k.length > 0)
+          : [],
     };
-    if (type === "custom") {
-      partial.fields = fields
-        .map((f) => ({ k: f.key.value.trim(), v: f.val.value }))
-        .filter((f) => f.k.length > 0);
-    }
-    let next = state.vault!;
-    if (editing) {
-      next = updateEntry(next, { ...editing, ...partial, updated: Date.now() });
-    } else {
-      next = addEntry(next, makeEntry(partial));
-    }
-    state.vault = next;
+    state.vault = editing
+      ? updateEntry(state.vault!, { ...editing, ...partial, updated: Date.now() })
+      : addEntry(state.vault!, makeEntry(partial));
     await persist();
-    close();
+    m.close();
     opts.onClose();
   });
-  actions.append(cancel, save);
+
   if (editing) {
-    const del = el("button", { class: "btn danger", textContent: t("editor.delete") });
+    const del = el("button", { class: "btn danger ghost push-left", type: "button", textContent: t("editor.delete") });
     del.addEventListener("click", async () => {
       if (!(await confirmModal(t("editor.confirmDelete"), t("editor.delete"), t("editor.cancel")))) return;
       state.vault = removeEntry(state.vault!, editing.id);
       await persist();
-      close();
+      m.close();
       opts.onClose();
     });
-    actions.append(del);
+    m.footer.append(del);
   }
-  modal.append(actions);
-
-  document.body.append(overlay);
+  m.footer.append(cancel, save);
+  titleInput.focus();
 }
