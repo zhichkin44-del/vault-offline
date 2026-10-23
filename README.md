@@ -22,7 +22,7 @@ The installer and the portable app keep the vault in the same place (your user p
 >
 > Vault makes no network connections, so it never phones home. If you'd rather not trust a binary, [build it yourself](#build-and-run).
 
-The older `releases/Vault_0.1.0_x64-setup.exe` is kept for reference. 0.2 migrates a 0.1 vault automatically on first start.
+The older 0.1 installer is kept in [Releases `v0.1.0`](https://github.com/zhichkin44-del/Vault/releases/tag/v0.1.0). 0.2 migrates a 0.1 vault automatically on first start.
 
 ## Features
 
@@ -139,8 +139,8 @@ The **Release** workflow (*Actions → Release → Run workflow*, manual only) b
 | Машина | dev-machine, `<project-dir>` |
 | Репозиторий | приватный `zhichkin44-del/Vault`, тема `studio`, ветка `main` |
 | Установка | Releases: установщик `…_x64-setup.exe` или портативная `…_x64-portable.exe` (если SmartScreen блокирует установщик) |
-| В git | код, тесты, документация, скриншоты, установщик 0.1 (`releases/`, исторически) |
-| Вне git | хранилище паролей владельца (папка данных приложения), сборки `src-tauri/target/` |
+| В git | код, тесты, документация, скриншоты |
+| Вне git | установщики (только GitHub Releases), хранилище паролей владельца (папка данных приложения), сборки `src-tauri/target/` |
 | Правила для ИИ | `CLAUDE.md` (`AGENTS.md`, `GEMINI.md` указывают туда) |
 
 ## License
