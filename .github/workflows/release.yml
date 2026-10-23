@@ -2,11 +2,11 @@
 #
 # - Manual run (Actions → Release → Run workflow): installers are attached to
 #   the run as workflow artifacts. Nothing is published.
-# - Pushing a tag like `v0.2.0`: the same build, plus a DRAFT GitHub release
-#   with the installers attached. A draft is invisible until you publish it.
+# - Manual only. The repository is private (zhichkin44-del/Vault), so every run
+#   spends the account's free Actions minutes (macOS minutes count 10x).
+#   Windows releases are normally built locally and uploaded with `gh release`.
 #
-# Free only: GitHub-hosted runners are free for public repositories, and no
-# code-signing certificates or secrets are used. The macOS app is ad-hoc signed
+# Free only: no code-signing certificates or secrets are used. The macOS app is ad-hoc signed
 # (bundle.macOS.signingIdentity = "-"), which is free and lets Apple Silicon
 # run it after the user allows it in System Settings → Privacy & Security.
 #
@@ -16,9 +16,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read

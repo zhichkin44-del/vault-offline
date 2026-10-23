@@ -6,12 +6,15 @@ A **local, offline password manager** for one person. Built with [Tauri v2](http
 
 ## Download
 
-Installers are built by GitHub Actions from this repository (see [`.github/workflows/release.yml`](.github/workflows/release.yml)) and attached to [Releases](https://github.com/zhichkin44-del/Vault/releases):
+Ready-to-run files are attached to [Releases](https://github.com/zhichkin44-del/Vault/releases) (private repository):
 
 | Platform | File | Notes |
 | --- | --- | --- |
 | Windows 10/11 (x64) | `Vault_<version>_x64-setup.exe` | NSIS installer, installs per user |
-| macOS 10.15+ (Intel and Apple Silicon) | `Vault_<version>_universal.dmg` | Drag *Vault* to Applications |
+| Windows 10/11 (x64) | `Vault_<version>_x64-portable.exe` | No installation: put it anywhere and run. Use it when SmartScreen or Smart App Control blocks the installer |
+| macOS 10.15+ (Intel and Apple Silicon) | `Vault_<version>_universal.dmg` | Built on demand by the Release workflow (see below) |
+
+The installer and the portable app keep the vault in the same place (your user profile's app data folder), so you can switch between them.
 
 > **Unsigned builds.** Code-signing certificates cost money, so the installers aren't signed.
 > - **Windows:** SmartScreen may say the publisher is unknown → *More info → Run anyway*.
@@ -118,10 +121,15 @@ cargo test --manifest-path src-tauri/Cargo.toml   # Rust storage tests
 
 ### Releases (free, unsigned)
 
-The **Release** workflow builds Windows and macOS installers on GitHub-hosted runners, which are free for public repositories:
+Windows files are built locally (`npm run tauri build`) and uploaded to a GitHub release:
 
-- *Actions → Release → Run workflow* builds the installers and attaches them to the run. Nothing is published.
-- Pushing a tag such as `v0.2.0` also creates a **draft** release with the installers. Review it, then publish it by hand.
+```bash
+gh release create v0.2.0 --title "Vault 0.2.0" --notes "..." \
+  "src-tauri/target/release/bundle/nsis/Vault_0.2.0_x64-setup.exe" \
+  "Vault_0.2.0_x64-portable.exe"   # a copy of src-tauri/target/release/vaulty.exe
+```
+
+The **Release** workflow (*Actions → Release → Run workflow*, manual only) builds Windows and macOS installers on GitHub-hosted runners and attaches them to the run. The repository is private, so runs use the account's free Actions minutes (macOS minutes count 10x); it no longer runs on every tag.
 
 ## License
 
