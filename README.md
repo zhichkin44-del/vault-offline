@@ -131,6 +131,18 @@ gh release create v0.2.0 --title "Vault 0.2.0" --notes "..." \
 
 The **Release** workflow (*Actions → Release → Run workflow*, manual only) builds Windows and macOS installers on GitHub-hosted runners and attaches them to the run. The repository is private, so runs use the account's free Actions minutes (macOS minutes count 10x); it no longer runs on every tag.
 
+## Паспорт проекта (Студия)
+
+| | |
+|---|---|
+| Этап | бета: версия 0.2 (состояние — `studio.json`, план — `PROJECT.md`) |
+| Машина | dev-machine, `<project-dir>ault` |
+| Репозиторий | приватный `zhichkin44-del/Vault`, тема `studio`, ветка `main` |
+| Установка | Releases: установщик `…_x64-setup.exe` или портативная `…_x64-portable.exe` (если SmartScreen блокирует установщик) |
+| В git | код, тесты, документация, скриншоты, установщик 0.1 (`releases/`, исторически) |
+| Вне git | хранилище паролей владельца (папка данных приложения), сборки `src-tauri/target/` |
+| Правила для ИИ | `CLAUDE.md` (`AGENTS.md`, `GEMINI.md` указывают туда) |
+
 ## License
 
 [MIT](LICENSE) © 2026 zhichkin44-del.
