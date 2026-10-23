@@ -136,7 +136,7 @@ The **Release** workflow (*Actions → Release → Run workflow*, manual only) b
 | | |
 |---|---|
 | Этап | бета: версия 0.2 (состояние — `studio.json`, план — `PROJECT.md`) |
-| Машина | dev-machine, `<project-dir>ault` |
+| Машина | dev-machine, `<project-dir>` |
 | Репозиторий | приватный `zhichkin44-del/Vault`, тема `studio`, ветка `main` |
 | Установка | Releases: установщик `…_x64-setup.exe` или портативная `…_x64-portable.exe` (если SmartScreen блокирует установщик) |
 | В git | код, тесты, документация, скриншоты, установщик 0.1 (`releases/`, исторически) |
