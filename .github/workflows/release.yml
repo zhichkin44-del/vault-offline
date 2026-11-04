@@ -1,0 +1,103 @@
+# Builds unsigned Vault installers for Windows (NSIS) and macOS (DMG).
+#
+# - Manual run (Actions → Release → Run workflow): installers are attached to
+#   the run as workflow artifacts. Nothing is published.
+# - Manual only, so macOS runner time is spent only when a build is needed.
+#   Windows releases are normally built locally and uploaded with `gh release`.
+#
+# Free only: no code-signing certificates or secrets are used. The macOS app is ad-hoc signed
+# (bundle.macOS.signingIdentity = "-"), which is free and lets Apple Silicon
+# run it after the user allows it in System Settings → Privacy & Security.
+#
+# Every third-party action is pinned to a full commit SHA (tag in the comment).
+
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Typecheck and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            rust-targets: ""
+            args: --bundles nsis
+          - name: macos-universal
+            os: macos-latest
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --bundles dmg --target universal-apple-darwin
+    runs-on: ${{ matrix.os }}
+    permissions:
+      # Needed only to create the draft release on tag pushes.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch
+        with:
+          toolchain: stable
+          targets: ${{ matrix.rust-targets }}
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: src-tauri -> target
+
+      - run: npm ci
+
+      - name: Rust storage tests
+        run: |
+          npm run build
+          cargo test --manifest-path src-tauri/Cargo.toml
+
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+          uploadWorkflowArtifacts: true
+          # Only set on tag pushes; on manual runs no release is touched.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('Vault {0}', github.ref_name) || '' }}
+          releaseBody: |
+            Unsigned builds. Windows SmartScreen and macOS Gatekeeper will warn
+            about an unknown developer — see README → Download for how to open them.
+            Vault makes no network connections.
+          releaseDraft: true
+          prerelease: false
