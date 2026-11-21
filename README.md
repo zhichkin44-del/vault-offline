@@ -90,14 +90,14 @@ vault/
 └── .github/workflows/release.yml
 ```
 
-## Build and run
-
-### Prerequisites
+## Requirements
 
 - [Git](https://git-scm.com/download/win)
 - [Node.js](https://nodejs.org/) 20+ with npm
 - [Rust](https://rustup.rs/) (stable)
 - [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/). On Windows that's the Visual Studio Build Tools (Desktop development with C++) and WebView2, which is built into Windows 11.
+
+## Installation
 
 ### Windows: from zero to a running app
 
@@ -150,14 +150,6 @@ npm run tauri build
 
 The Windows installer is written to `src-tauri/target/release/bundle/nsis/`.
 
-### Tests
-
-```bash
-npm test                              # unit + UI smoke tests
-npm run typecheck                     # TypeScript
-cargo test --manifest-path src-tauri/Cargo.toml   # Rust storage tests
-```
-
 ### Releases (free, unsigned)
 
 Windows files are built locally (`npm run tauri build`) and uploaded to a GitHub release:
@@ -169,6 +161,18 @@ gh release create v0.2.0 --title "Vault 0.2.0" --notes "..." \
 ```
 
 The **Release** workflow (*Actions → Release → Run workflow*, manual only) builds Windows and macOS installers on GitHub-hosted runners and attaches them to the run. It runs only on demand, not on every tag.
+
+## Usage
+
+Create a vault with a master password, or unlock the existing one. `Ctrl+K` searches, `Ctrl+L` locks the vault now, and copied passwords are cleared from the clipboard after 15 seconds. There is no recovery if the master password is lost.
+
+## Tests
+
+```bash
+npm test                              # unit + UI smoke tests
+npm run typecheck                     # TypeScript
+cargo test --manifest-path src-tauri/Cargo.toml   # Rust storage tests
+```
 
 ## License
 
