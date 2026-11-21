@@ -94,9 +94,46 @@ vault/
 
 ### Prerequisites
 
+- [Git](https://git-scm.com/download/win)
 - [Node.js](https://nodejs.org/) 20+ with npm
 - [Rust](https://rustup.rs/) (stable)
 - [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/). On Windows that's the Visual Studio Build Tools (Desktop development with C++) and WebView2, which is built into Windows 11.
+
+### Windows: from zero to a running app
+
+1. Install Git, Node.js 20+ (LTS), and the Visual Studio Build Tools with the "Desktop development with C++" workload.
+2. Install Rust: download and run `rustup-init.exe` from [rustup.rs](https://rustup.rs/), accept the defaults.
+3. Open a new PowerShell window and check the tools:
+
+   ```powershell
+   git --version; node --version; npm --version; cargo --version
+   ```
+
+4. Clone and install dependencies:
+
+   ```powershell
+   git clone https://github.com/zhichkin44-del/vault-offline.git
+   cd vault-offline
+   npm install
+   ```
+
+5. Run the tests:
+
+   ```powershell
+   npm test
+   npm run typecheck
+   cargo test --manifest-path src-tauri/Cargo.toml
+   ```
+
+6. Start the app in development mode (the first build takes several minutes):
+
+   ```powershell
+   npm run tauri dev
+   ```
+
+7. Or build the installer: `npm run tauri build`. The result is in `src-tauri\target\release\bundle\nsis\`.
+
+If Windows SmartScreen or Smart App Control blocks an unsigned build, do not disable them. Use the portable build from [Releases](https://github.com/zhichkin44-del/vault-offline/releases), or build it yourself as above.
 
 ### Development
 
