@@ -11,7 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "tsx --test test/*.test.ts",
+    "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
