@@ -2,8 +2,7 @@
 #
 # - Manual run (Actions → Release → Run workflow): installers are attached to
 #   the run as workflow artifacts. Nothing is published.
-# - Manual only. The repository is private (zhichkin44-del/Vault), so every run
-#   spends the account's free Actions minutes (macOS minutes count 10x).
+# - Manual only, so macOS runner time is spent only when a build is needed.
 #   Windows releases are normally built locally and uploaded with `gh release`.
 #
 # Free only: no code-signing certificates or secrets are used. The macOS app is ad-hoc signed

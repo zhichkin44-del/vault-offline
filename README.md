@@ -4,9 +4,11 @@ A **local, offline password manager** for one person. Built with [Tauri v2](http
 
 ![Vault — main screen](screenshots/03-vault.png)
 
+*Screenshots show the Russian interface with made-up demo data; English is one click away (the language item in the ⋯ menu).*
+
 ## Download
 
-Ready-to-run files are attached to [Releases](https://github.com/zhichkin44-del/Vault/releases) (private repository):
+Ready-to-run files are attached to [Releases](https://github.com/zhichkin44-del/vault-offline/releases):
 
 | Platform | File | Notes |
 | --- | --- | --- |
@@ -22,7 +24,7 @@ The installer and the portable app keep the vault in the same place (your user p
 >
 > Vault makes no network connections, so it never phones home. If you'd rather not trust a binary, [build it yourself](#build-and-run).
 
-The older 0.1 installer is kept in [Releases `v0.1.0`](https://github.com/zhichkin44-del/Vault/releases/tag/v0.1.0). 0.2 migrates a 0.1 vault automatically on first start.
+Version 0.2 migrates a vault from 0.1 automatically on first start.
 
 ## Features
 
@@ -129,20 +131,8 @@ gh release create v0.2.0 --title "Vault 0.2.0" --notes "..." \
   "Vault_0.2.0_x64-portable.exe"   # a copy of src-tauri/target/release/vaulty.exe
 ```
 
-The **Release** workflow (*Actions → Release → Run workflow*, manual only) builds Windows and macOS installers on GitHub-hosted runners and attaches them to the run. The repository is private, so runs use the account's free Actions minutes (macOS minutes count 10x); it no longer runs on every tag.
-
-## Паспорт проекта (Студия)
-
-| | |
-|---|---|
-| Этап | бета: версия 0.2 (состояние — `studio.json`, план — `PROJECT.md`) |
-| Машина | dev-machine, `<project-dir>` |
-| Репозиторий | приватный `zhichkin44-del/Vault`, тема `studio`, ветка `main` |
-| Установка | Releases: установщик `…_x64-setup.exe` или портативная `…_x64-portable.exe` (если SmartScreen блокирует установщик) |
-| В git | код, тесты, документация, скриншоты |
-| Вне git | установщики (только GitHub Releases), хранилище паролей владельца (папка данных приложения), сборки `src-tauri/target/` |
-| Правила для ИИ | `CLAUDE.md` (`AGENTS.md`, `GEMINI.md` указывают туда) |
+The **Release** workflow (*Actions → Release → Run workflow*, manual only) builds Windows and macOS installers on GitHub-hosted runners and attaches them to the run. It runs only on demand, not on every tag.
 
 ## License
 
-[MIT](LICENSE) © 2026 zhichkin44-del.
+[MIT](LICENSE) © 2026 zhichkin44-del. Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

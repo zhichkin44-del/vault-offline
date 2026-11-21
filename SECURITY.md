@@ -12,7 +12,7 @@ master password.
 | Key derivation | Your master password goes through **Argon2id** (memory 64 MiB, 3 passes, parallelism 1, 32-byte output) with a random 16-byte salt. |
 | Encryption | The whole entry list (titles, logins, passwords, URLs, notes, custom fields) is serialised to JSON and encrypted with **AES-256-GCM** using a fresh random 96-bit IV on every save. GCM is authenticated: any modified byte makes decryption fail instead of returning garbage. |
 | What stays readable | Only the file header: format version, KDF name and parameters, salt and IV. None of these are secret. |
-| Crypto libraries | AES-GCM and PBKDF2 come from the platform WebCrypto API; Argon2id from [`@noble/hashes`](https://github.com/paulmillr/noble-hashes) (audited, dependency-free). No custom cryptography. |
+| Crypto libraries | AES-GCM and PBKDF2 come from the platform WebCrypto API; Argon2id from [`@noble/hashes`](https://github.com/paulmillr/noble-hashes) (dependency-free, widely used; its independent audit predates the Argon2 module, so Argon2id itself has not been audited separately). No custom cryptography. |
 | Randomness | Salts, IVs and generated passwords use `crypto.getRandomValues` (OS CSPRNG). |
 | Legacy files | Vaults created by early builds used PBKDF2-SHA-256 (250 000 / 600 000 iterations). They still open; saving them again keeps their parameters until you change the master password. |
 
@@ -104,6 +104,6 @@ vault without its master password.
 
 ## Reporting a vulnerability
 
-Please open a [GitHub security advisory](https://github.com/zhichkin44-del/Vault/security/advisories/new)
+Please open a [GitHub security advisory](https://github.com/zhichkin44-del/vault-offline/security/advisories/new)
 (private) rather than a public issue. Include steps to reproduce and the
 version you tested.
